@@ -104,14 +104,14 @@ public class Bard {
             "rt": "c"
         ]
         
-        let inputTextStruct: [[Any?]]? = [
+        let inputTextStruct: [[Any?]] = [
             [inputText],
             nil,
             [conversationID, responseID, choiceID]
         ]
         
         let data: [String: Any] = [
-            "f.req": [nil, inputTextStruct] as Any,
+            "f.req": [nil, inputTextStruct].jsonStringRepresentation,
             "at": snim0e ?? ""
         ]
         
@@ -153,7 +153,7 @@ public class Bard {
             
             do {
                 let jsonObject = try JSONSerialization.jsonObject(with: data, options: [])
-                if let jsonArray = jsonObject as? [[Any]], let respDict = jsonArray.last as? [String: Any] {
+                if let jsonArray = jsonObject as? [[Any]], let respDict = jsonArray[3] as? [String: Any] {
                     completion(.success(respDict))
                 } else {
                     let error = NSError(domain: "Invalid response format.", code: 0, userInfo: nil)
@@ -164,5 +164,68 @@ public class Bard {
             }
         }
         task.resume()
+    }
+}
+
+extension Array where Element == [Any?] {
+    var jsonStringRepresentation: String {
+        let jsonArray = self.map { $0.jsonStringRepresentation }
+        return "[" + jsonArray.joined(separator: ",") + "]"
+    }
+}
+
+extension Optional where Wrapped == [Any?] {
+    var jsonStringRepresentation: String {
+        switch self {
+        case .none:
+            return "null"
+        case .some(let array):
+            return array.jsonStringRepresentation
+        }
+    }
+}
+
+extension Optional where Wrapped == Any {
+    var jsonStringRepresentation: String {
+        switch self {
+        case .none:
+            return "null"
+        case .some(let value):
+            return value.jsonStringRepresentation
+        }
+    }
+}
+
+extension Any {
+    var jsonStringRepresentation: String {
+        if let number = self as? NSNumber {
+            return number.stringValue
+        }
+        
+        if let boolValue = self as? Bool {
+            return boolValue ? "true" : "false"
+        }
+        
+        if let array = self as? [Any?] {
+            let jsonArray = array.map { $0.jsonStringRepresentation }
+            return "[" + jsonArray.joined(separator: ",") + "]"
+        }
+        
+        if let dictionary = self as? [String: Any?] {
+            let jsonString = dictionary.reduce("") { (result, entry) -> String in
+                let key = entry.key
+                let value = entry.value.jsonStringRepresentation
+                let keyValueString = "\"\(key)\":\(value)"
+                return result.isEmpty ? keyValueString : "\(result),\(keyValueString)"
+            }
+            return "{" + jsonString + "}"
+        }
+        
+        if let string = self as? String {
+            let jsonString = string.replacingOccurrences(of: "\"", with: "\\\"")
+            return "\"\(jsonString)\""
+        }
+        
+        return "\(self)"
     }
 }
