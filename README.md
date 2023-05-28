@@ -1,3 +1,3 @@
-# BardAPI
+# BardAPI-for-Swift
 
-A description of this package.
+This project accepts various pull requests, including bug fixes to contributions.
